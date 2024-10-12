@@ -1,0 +1,202 @@
+/*Normalized Table Design:
+
+    Authors Table:
+        author_id (Primary Key)
+        name (Name of the author)
+
+    Articles Table:
+        article_id (Primary Key)
+        title (Title of the article)
+        word_count (Word count of the article)
+        author_id (Foreign Key from Authors table)
+
+    Views Table:
+        article_id (Foreign Key from Articles table)
+        views (Number of views for the article)*/
+
+CREATE DATABASE blog_db;
+use blog_db;
+-- Create Authors Table
+CREATE TABLE Authors (
+                         author_id INT PRIMARY KEY AUTO_INCREMENT,
+                         name VARCHAR(255) NOT NULL
+);
+
+-- Create Articles Table
+CREATE TABLE Articles (
+  article_id INT PRIMARY KEY AUTO_INCREMENT,
+  title VARCHAR(255) NOT NULL,
+  word_count INT NOT NULL,
+  author_id INT,
+  FOREIGN KEY (author_id) REFERENCES Authors(author_id)
+);
+
+-- Create Views Table
+CREATE TABLE Views (
+   article_id INT,
+   views INT NOT NULL,
+   PRIMARY KEY (article_id),
+   FOREIGN KEY (article_id) REFERENCES Articles(article_id)
+);
+
+-- Insert Authors
+INSERT INTO Authors (name) VALUES
+                               ('Maria Charlotte'),
+                               ('Juan Perez'),
+                               ('Gemma Alcocer');
+
+-- Insert Articles
+INSERT INTO Articles (title, word_count, author_id) VALUES
+        ('Best Paint Colors', 814, 1),
+        ('Small Space Decorating Tips', 1146, 2),
+        ('Hot Accessories', 986, 1),
+        ('Mixing Textures', 765, 1),
+        ('Kitchen Refresh', 1242, 2),
+        ('Homemade Art Hacks', 1002, 1),
+        ('Refinishing Wood Floors', 1571, 3);
+
+-- Insert Views
+INSERT INTO Views (article_id, views) VALUES
+      (1, 14),
+      (2, 221),
+      (3, 105),
+      (4, 22),
+      (5, 307),
+      (6, 193),
+      (7, 7542);
+
+/*Normalization Process
+
+    1NF (First Normal Form): Ensure all columns contain atomic (indivisible) values and remove duplicate rows.
+
+    2NF (Second Normal Form): Remove partial dependencies by creating separate tables for Customers, Flights, and Aircraft. Each table will have its own primary key.
+
+    3NF (Third Normal Form): Remove transitive dependencies (where non-key attributes depend on other non-key attributes). For instance, customer status and mileage should not be dependent on customer names but rather on a Customer ID.
+
+Normalized Database Schema
+
+The normalized structure will have four main entities:
+
+    Customers: Stores unique customers and their statuses.
+    Flights: Stores unique flight information like flight number and mileage.
+    Aircraft: Stores information about the aircraft used for the flights.
+    Bookings: Links customers to flights and contains the total mileage for the customer.
+*/
+-- Step 1: Create the Customer table
+CREATE TABLE Customer (
+          customer_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+          customer_name VARCHAR(255) NOT NULL,
+          customer_status VARCHAR(50)
+);
+
+-- Step 2: Create the Aircraft table
+CREATE TABLE Aircraft (
+          aircraft_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+          aircraft_name VARCHAR(255) NOT NULL,
+          total_seats INT NOT NULL
+);
+
+-- Step 3: Create the Flight table
+CREATE TABLE Flight (
+        flight_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+        flight_number VARCHAR(50) NOT NULL,
+        aircraft_id BIGINT,
+        mileage INT NOT NULL,
+        FOREIGN KEY (aircraft_id) REFERENCES Aircraft(aircraft_id)
+);
+
+-- Step 4: Create the Booking table (to link Customers and Flights)
+CREATE TABLE Booking (
+                         booking_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+         customer_id BIGINT,
+         flight_id BIGINT,
+         total_customer_mileage INT NOT NULL,
+         FOREIGN KEY (customer_id) REFERENCES Customer(customer_id),
+         FOREIGN KEY (flight_id) REFERENCES Flight(flight_id)
+);
+
+-- Insert sample data into Customer table
+INSERT INTO Customer (customer_name, customer_status) VALUES
+              ('Agustine Riviera', 'Silver'),
+              ('Alaina Pulverised', 'None'),
+              ('Tom Jones', 'Gold'),
+              ('Sam Rio', 'None'),
+              ('Jessica James', 'Silver'),
+              ('Ana Janco', 'Silver'),
+              ('Jennifer Cortez', 'Gold'),
+              ('Christian Janco', 'Silver');
+
+-- Insert sample data into Aircraft table
+INSERT INTO Aircraft (aircraft_name, total_seats) VALUES
+                          ('Boeing 747', 400),
+                          ('Airbus A330', 236),
+                          ('Boeing 777', 264);
+
+-- Insert sample data into Flight table
+INSERT INTO Flight (flight_number, aircraft_id, mileage) VALUES
+             ('DL143', 1, 135),
+             ('DL122', 2, 4370),
+             ('DL53', 3, 2078),
+             ('DL222', 3, 1765),
+             ('DL37', 1, 531);
+
+-- Insert sample data into Booking table (link customers and flights)
+INSERT INTO Booking (customer_id, flight_id, total_customer_mileage) VALUES
+             (1, 1, 115235),
+             (1, 2, 115235),
+             (2, 2, 6008),
+             (3, 2, 205767),
+             (3, 3, 205767),
+             (4, 1, 2653),
+             (5, 1, 127656),
+             (6, 4, 136773),
+             (7, 4, 300582),
+             (8, 4, 14642),
+             (4, 5, 2653);
+
+-- Query 1: Get total number of flights in the database
+SELECT COUNT(*) AS total_flights FROM Flight;
+
+-- Query 2: Get the average flight distance
+SELECT AVG(mileage) AS average_flight_distance FROM Flight;
+
+-- Query 3: Get the average number of seats on aircraft
+SELECT AVG(total_seats) AS average_seats FROM Aircraft;
+
+-- Query 4: Get the average number of miles flown by customers grouped by status
+SELECT c.customer_status, AVG(b.total_customer_mileage) AS avg_miles
+FROM Customer c
+         JOIN Booking b ON c.customer_id = b.customer_id
+GROUP BY c.customer_status;
+
+-- Query 5: Get the maximum number of miles flown by customers grouped by status
+SELECT c.customer_status, MAX(b.total_customer_mileage) AS max_miles
+FROM Customer c
+         JOIN Booking b ON c.customer_id = b.customer_id
+GROUP BY c.customer_status;
+
+-- Query 6: Get the total number of aircraft with a name containing Boeing
+SELECT COUNT(*) AS total_boeing_aircraft FROM Aircraft
+WHERE aircraft_name LIKE '%Boeing%';
+
+-- Query 7: Find all flights with a distance between 300 and 2000 miles
+SELECT * FROM Flight
+WHERE mileage BETWEEN 300 AND 2000;
+
+-- Query 8: Find the average flight distance booked grouped by customer status
+SELECT c.customer_status, AVG(f.mileage) AS avg_flight_distance
+FROM Customer c
+         JOIN Booking b ON c.customer_id = b.customer_id
+         JOIN Flight f ON b.flight_id = f.flight_id
+GROUP BY c.customer_status;
+
+-- Query 9: Find the most often booked aircraft by gold status members
+SELECT a.aircraft_name, COUNT(*) AS total_bookings
+FROM Customer c
+         JOIN Booking b ON c.customer_id = b.customer_id
+         JOIN Flight f ON b.flight_id = f.flight_id
+         JOIN Aircraft a ON f.aircraft_id = a.aircraft_id
+WHERE c.customer_status = 'Gold'
+GROUP BY a.aircraft_name
+ORDER BY total_bookings DESC
+LIMIT 1;
